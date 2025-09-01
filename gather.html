@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gather</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Lora', serif;
+            background-color: #fcfbf6;
+        }
+
+        .container {
+            max-width: 600px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            @apply flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mt-4;
+        }
+        
+        .newspaper-button {
+            @apply bg-black text-white border-2 border-black;
+        }
+
+        .newspaper-button:hover {
+            @apply bg-gray-800;
+        }
+        
+        /* Custom modal for messages */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%; /* Responsive width */
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .modal-close:hover,
+        .modal-close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        /* Newspaper specific styles */
+        .header-title {
+            font-family: 'Playfair Display', serif;
+        }
+        .section-header {
+            font-family: 'Playfair Display', serif;
+            border-bottom: 2px solid black;
+            padding-bottom: 8px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Modal for messages -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <p id="modalMessage" class="text-lg text-gray-800 font-medium"></p>
+        </div>
+    </div>
+    
+    <header class="bg-white p-4 border-b-2 border-black fixed top-0 w-full z-10">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-3xl font-bold text-gray-900 header-title">The Gather Daily</h1>
+            <div id="loadingIndicator" class="hidden text-sm text-gray-500 animate-pulse">Loading...</div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 mt-20 pb-20">
+        <div class="container mx-auto">
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Dashboard</h2>
+                <div id="dashboardSummary" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <!-- Summary cards will be rendered here -->
+                </div>
+                <div id="eventDistributionChart" class="bg-gray-50 p-4 border border-black">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Events Distribution by Month</h3>
+                    <div id="chartContainer" class="space-y-2">
+                        <!-- Event distribution chart will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Photos Tab -->
+            <div id="photos-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Photos</h2>
+                <div class="input-group flex-col !space-y-4 !sm:space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">Select Photo File</label>
+                    <input type="file" id="photoFile" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-black hover:file:bg-gray-200">
+                    <label class="block text-sm font-medium text-gray-700">Photo Caption</label>
+                    <input type="text" id="photoCaption" placeholder="Add a caption..." class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <button id="addPhotoButton" class="newspaper-button text-white font-semibold py-2 px-4 shadow-md hover:bg-black transition duration-300 ease-in-out">
+                        Add Photo
+                    </button>
+                </div>
+                <div id="photosList" class="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <!-- Photos will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Links Tab -->
+            <div id="links-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Links</h2>
+                <div class="input-group flex-col !space-y-4 !sm:space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">Link URL</label>
+                    <input type="text" id="linkUrl" placeholder="Paste a link here" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Link Title</label>
+                    <input type="text" id="linkTitle" placeholder="Give the link a title" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea id="linkNotes" placeholder="Add some notes about this link" rows="2" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out"></textarea>
+                    <button id="addLinkButton" class="newspaper-button text-white font-semibold py-2 px-4 shadow-md hover:bg-black transition duration-300 ease-in-out">
+                        Add Link
+                    </button>
+                </div>
+                <div id="linksList" class="mt-6 space-y-4">
+                    <!-- Links will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Routes Tab -->
+            <div id="routes-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Routes</h2>
+                <div class="input-group flex-col !space-y-4 !sm:space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">Start Point</label>
+                    <input type="text" id="routeStartPoint" placeholder="e.g., Los Angeles" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">End Point</label>
+                    <input type="text" id="routeEndPoint" placeholder="e.g., San Francisco" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input type="date" id="routeStartDate" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input type="date" id="routeEndDate" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea id="routeNotes" placeholder="Add some notes about this route" rows="2" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out"></textarea>
+                    <button id="addRouteButton" class="newspaper-button text-white font-semibold py-2 px-4 shadow-md hover:bg-black transition duration-300 ease-in-out">
+                        Add Route
+                    </button>
+                </div>
+                <div id="routesList" class="mt-6 space-y-4">
+                    <!-- Routes will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Bookings Tab -->
+            <div id="bookings-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Bookings</h2>
+                <div class="input-group flex-col !space-y-4 !sm:space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">Booking Name</label>
+                    <input type="text" id="bookingName" placeholder="e.g., Hotel, Flight, Restaurant" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Confirmation Number</label>
+                    <input type="text" id="bookingConfirmation" placeholder="Add confirmation number" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input type="date" id="bookingStartDate" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input type="date" id="bookingEndDate" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Time</label>
+                    <input type="time" id="bookingTime" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea id="bookingNotes" placeholder="Add detailed notes about this booking" rows="2" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out"></textarea>
+                    <button id="addBookingButton" class="newspaper-button text-white font-semibold py-2 px-4 shadow-md hover:bg-black transition duration-300 ease-in-out">
+                        Add Booking
+                    </button>
+                </div>
+                <div id="bookingsList" class="mt-6 space-y-4">
+                    <!-- Bookings will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Events Tab -->
+            <div id="events-tab" class="tab-content bg-white p-6 border border-black mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 section-header">Events</h2>
+                <div class="input-group flex-col !space-y-4 !sm:space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">Event Name</label>
+                    <input type="text" id="eventName" placeholder="e.g., Birthday Party" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Location</label>
+                    <input type="text" id="eventLocation" placeholder="Address or venue" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="eventDate" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Time</label>
+                    <input type="time" id="eventTime" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out">
+                    <label class="block text-sm font-medium text-gray-700">Upload Document</label>
+                    <input type="file" id="eventDocument" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-black hover:file:bg-gray-200">
+                    <label class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea id="eventNotes" placeholder="Add detailed notes for the event" rows="2" class="w-full p-2 border border-black focus:outline-none focus:ring-2 focus:ring-black transition duration-300 ease-in-out"></textarea>
+                    <button id="addEventButton" class="newspaper-button text-white font-semibold py-2 px-4 shadow-md hover:bg-black transition duration-300 ease-in-out">
+                        Add Event
+                    </button>
+                </div>
+                <div id="eventsList" class="mt-6 space-y-4">
+                    <!-- Events will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white p-4 border-t-2 border-black fixed bottom-0 w-full z-10">
+        <div class="container mx-auto flex justify-around items-center">
+            <button id="showDashboardTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Dashboard</span>
+            </button>
+            <button id="showPhotosTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Photos</span>
+            </button>
+            <button id="showLinksTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.81-5.011a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101M16 7h.01" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Links</span>
+            </button>
+            <button id="showRoutesTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.553-.894L9 7m0 13l4.553-2.276A1 1 0 0015 16.382V5.618a1 1 0 00-1.553-.894L9 7m0 13V7m0 0a2 2 0 110-4 2 2 0 010 4zm0 13a2 2 0 110-4 2 2 0 010 4zm9-13a2 2 0 110-4 2 2 0 010 4zm0 13a2 2 0 110-4 2 2 0 010 4z" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Routes</span>
+            </button>
+            <button id="showBookingsTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h.01M3 21h18a2 2 0 002-2V7a2 2 0 00-2-2H3a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Bookings</span>
+            </button>
+            <button id="showEventsTab" class="flex flex-col items-center text-gray-600 hover:text-black transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-xs mt-1 font-medium">Events</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, addDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Log all Firebase debug messages
+        setLogLevel('debug');
+
+        // Global variables for Firebase configuration, provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- IMPORTANT: ADD YOUR FIREBASE CONFIG HERE FOR LOCAL TESTING ---
+        // If you are running this file outside of the Canvas environment, the `__firebase_config` variable will be empty.
+        // You can get your project's configuration from the Firebase console and paste it here to enable database functionality.
+        // For example:
+        // const customFirebaseConfig = {
+        //   apiKey: "your-api-key",
+        //   authDomain: "your-project-id.firebaseapp.com",
+        //   projectId: "your-project-id",
+        //   storageBucket: "your-project-id.appspot.com",
+        //   messagingSenderId: "your-sender-id",
+        //   appId: "your-app-id"
+        // };
+        // If you use this, uncomment the line below:
+        // if (Object.keys(firebaseConfig).length === 0) { firebaseConfig = customFirebaseConfig; }
+        
+        let app, db, auth;
+        let unsubscribeListeners = [];
+
+        // UI Elements
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const tabs = {
+            dashboard: document.getElementById('dashboard-tab'),
+            photos: document.getElementById('photos-tab'),
+            links: document.getElementById('links-tab'),
+            routes: document.getElementById('routes-tab'),
+            bookings: document.getElementById('bookings-tab'),
+            events: document.getElementById('events-tab'),
+        };
+        const navButtons = {
+            dashboard: document.getElementById('showDashboardTab'),
+            photos: document.getElementById('showPhotosTab'),
+            links: document.getElementById('showLinksTab'),
+            routes: document.getElementById('showRoutesTab'),
+            bookings: document.getElementById('showBookingsTab'),
+            events: document.getElementById('showEventsTab'),
+        };
+        
+        // Dashboard elements
+        const dashboardSummary = document.getElementById('dashboardSummary');
+        const chartContainer = document.getElementById('chartContainer');
+        
+        // Photo inputs
+        const photoFile = document.getElementById('photoFile');
+        const photoCaption = document.getElementById('photoCaption');
+        const addPhotoButton = document.getElementById('addPhotoButton');
+        const photosList = document.getElementById('photosList');
+        
+        // Link inputs
+        const linkUrl = document.getElementById('linkUrl');
+        const linkTitle = document.getElementById('linkTitle');
+        const linkNotes = document.getElementById('linkNotes');
+        const addLinkButton = document.getElementById('addLinkButton');
+        const linksList = document.getElementById('linksList');
+        
+        // Route inputs
+        const routeStartPoint = document.getElementById('routeStartPoint');
+        const routeEndPoint = document.getElementById('routeEndPoint');
+        const routeStartDate = document.getElementById('routeStartDate');
+        const routeEndDate = document.getElementById('routeEndDate');
+        const routeNotes = document.getElementById('routeNotes');
+        const addRouteButton = document.getElementById('addRouteButton');
+        const routesList = document.getElementById('routesList');
+        
+        // Booking inputs
+        const bookingName = document.getElementById('bookingName');
+        const bookingConfirmation = document.getElementById('bookingConfirmation');
+        const bookingStartDate = document.getElementById('bookingStartDate');
+        const bookingEndDate = document.getElementById('bookingEndDate');
+        const bookingTime = document.getElementById('bookingTime');
+        const bookingNotes = document.getElementById('bookingNotes');
+        const addBookingButton = document.getElementById('addBookingButton');
+        const bookingsList = document.getElementById('bookingsList');
+
+        // Event inputs
+        const eventName = document.getElementById('eventName');
+        const eventLocation = document.getElementById('eventLocation');
+        const eventDate = document.getElementById('eventDate');
+        const eventTime = document.getElementById('eventTime');
+        const eventDocument = document.getElementById('eventDocument');
+        const eventNotes = document.getElementById('eventNotes');
+        const addEventButton = document.getElementById('addEventButton');
+        const eventsList = document.getElementById('eventsList');
+        
+        const modal = document.getElementById('messageModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalClose = document.querySelector('#messageModal .modal-close');
+        
+        // Show a custom modal message
+        function showMessage(message) {
+            modalMessage.textContent = message;
+            modal.style.display = 'block';
+        }
+
+        // Close modal
+        modalClose.onclick = function() {
+            modal.style.display = 'none';
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Tab switching logic
+        function showTab(tabName) {
+            Object.values(tabs).forEach(tab => tab.classList.remove('active'));
+            Object.values(navButtons).forEach(button => button.classList.remove('text-black'));
+            Object.values(navButtons).forEach(button => button.classList.add('text-gray-600'));
+            
+            tabs[tabName].classList.add('active');
+            navButtons[tabName].classList.remove('text-gray-600');
+            navButtons[tabName].classList.add('text-black');
+        }
+        
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            showTab('dashboard');
+        });
+        navButtons.dashboard.addEventListener('click', () => showTab('dashboard'));
+        navButtons.photos.addEventListener('click', () => showTab('photos'));
+        navButtons.links.addEventListener('click', () => showTab('links'));
+        navButtons.routes.addEventListener('click', () => showTab('routes'));
+        navButtons.bookings.addEventListener('click', () => showTab('bookings'));
+        navButtons.events.addEventListener('click', () => showTab('events'));
+
+        async function initializeFirebase() {
+            loadingIndicator.classList.remove('hidden');
+            // Check for valid Firebase configuration before proceeding
+            if (!firebaseConfig || !firebaseConfig.projectId || !firebaseConfig.apiKey) {
+                showMessage("Connection failed: Missing Firebase configuration.");
+                console.error("Firebase config is missing or invalid. Check the environment variables.");
+                loadingIndicator.classList.add('hidden');
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Sign in with custom token or anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Start real-time listeners for each collection
+                setupListeners();
+
+            } catch (error) {
+                console.error("Firebase initialization or sign-in failed:", error);
+                showMessage("Failed to connect. Check your console for details.");
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+        
+        function setupListeners() {
+            if (!db) return;
+
+            // Clear previous listeners to prevent duplicates
+            unsubscribeListeners.forEach(unsub => unsub());
+            unsubscribeListeners = [];
+
+            // Listen for photos
+            const photosRef = collection(db, `artifacts/${appId}/public/data/photos`);
+            unsubscribeListeners.push(onSnapshot(photosRef, (snapshot) => {
+                const photos = [];
+                snapshot.forEach(doc => { photos.push({ id: doc.id, ...doc.data() }); });
+                renderPhotos(photos);
+                updateDashboard(photos.length, null, null, null, null);
+            }));
+
+            // Listen for links
+            const linksRef = collection(db, `artifacts/${appId}/public/data/links`);
+            unsubscribeListeners.push(onSnapshot(linksRef, (snapshot) => {
+                const links = [];
+                snapshot.forEach(doc => { links.push({ id: doc.id, ...doc.data() }); });
+                renderLinks(links);
+                updateDashboard(null, links.length, null, null, null);
+            }));
+
+            // Listen for routes
+            const routesRef = collection(db, `artifacts/${appId}/public/data/routes`);
+            unsubscribeListeners.push(onSnapshot(routesRef, (snapshot) => {
+                const routes = [];
+                snapshot.forEach(doc => { routes.push({ id: doc.id, ...doc.data() }); });
+                renderRoutes(routes);
+                updateDashboard(null, null, routes.length, null, null);
+            }));
+
+            // Listen for bookings
+            const bookingsRef = collection(db, `artifacts/${appId}/public/data/bookings`);
+            unsubscribeListeners.push(onSnapshot(bookingsRef, (snapshot) => {
+                const bookings = [];
+                snapshot.forEach(doc => { bookings.push({ id: doc.id, ...doc.data() }); });
+                renderBookings(bookings);
+                updateDashboard(null, null, null, bookings.length, null);
+            }));
+
+            // Listen for events
+            const eventsRef = collection(db, `artifacts/${appId}/public/data/events`);
+            unsubscribeListeners.push(onSnapshot(eventsRef, (snapshot) => {
+                const events = [];
+                snapshot.forEach(doc => { events.push({ id: doc.id, ...doc.data() }); });
+                renderEvents(events);
+                updateDashboard(null, null, null, null, events);
+            }));
+        }
+
+        let summaryData = { photos: 0, links: 0, routes: 0, bookings: 0, events: 0 };
+        function updateDashboard(photosCount, linksCount, routesCount, bookingsCount, eventsData) {
+            if (photosCount !== null) summaryData.photos = photosCount;
+            if (linksCount !== null) summaryData.links = linksCount;
+            if (routesCount !== null) summaryData.routes = routesCount;
+            if (bookingsCount !== null) summaryData.bookings = bookingsCount;
+            if (eventsData !== null) summaryData.events = eventsData.length;
+
+            renderDashboardSummary();
+            if (eventsData !== null) {
+                renderEventsChart(eventsData);
+            }
+        }
+
+        function renderDashboardSummary() {
+            dashboardSummary.innerHTML = '';
+            const data = [
+                { title: "Photos", count: summaryData.photos },
+                { title: "Links", count: summaryData.links },
+                { title: "Routes", count: summaryData.routes },
+                { title: "Bookings", count: summaryData.bookings },
+                { title: "Events", count: summaryData.events },
+            ];
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 p-4 border border-black text-center';
+                card.innerHTML = `
+                    <p class="text-3xl font-bold text-gray-900">${item.count}</p>
+                    <p class="text-sm text-gray-500 mt-1">${item.title}</p>
+                `;
+                dashboardSummary.appendChild(card);
+            });
+        }
+
+        function renderEventsChart(eventsData) {
+            chartContainer.innerHTML = '';
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthlyCounts = new Array(12).fill(0);
+            
+            let maxCount = 0;
+            eventsData.forEach(event => {
+                if (event.eventDate) {
+                    const monthIndex = new Date(event.eventDate).getMonth();
+                    monthlyCounts[monthIndex]++;
+                    if (monthlyCounts[monthIndex] > maxCount) {
+                        maxCount = monthlyCounts[monthIndex];
+                    }
+                }
+            });
+
+            months.forEach((month, index) => {
+                const count = monthlyCounts[index];
+                const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                const bar = document.createElement('div');
+                bar.className = 'flex items-center space-x-2';
+                bar.innerHTML = `
+                    <div class="w-10 text-right text-xs text-gray-500">${month}</div>
+                    <div class="relative flex-grow h-6 bg-gray-200 rounded-full">
+                        <div class="absolute h-full bg-black transition-all duration-500 ease-in-out" style="width: ${percentage}%"></div>
+                        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-white">${count}</span>
+                    </div>
+                `;
+                chartContainer.appendChild(bar);
+            });
+        }
+
+        // --- Event Handlers for adding data ---
+        addPhotoButton.addEventListener('click', async () => {
+            const file = photoFile.files[0];
+            const caption = photoCaption.value.trim();
+            if (!file) {
+                showMessage("Please select a photo to upload.");
+                return;
+            }
+            try {
+                const photosRef = collection(db, `artifacts/${appId}/public/data/photos`);
+                await addDoc(photosRef, {
+                    filename: file.name,
+                    caption: caption,
+                    timestamp: new Date(),
+                });
+                photoFile.value = '';
+                photoCaption.value = '';
+            } catch (error) {
+                console.error("Error adding photo:", error);
+                showMessage("Failed to add photo. See console for details.");
+            }
+        });
+
+        addLinkButton.addEventListener('click', async () => {
+            const url = linkUrl.value.trim();
+            const title = linkTitle.value.trim();
+            const notes = linkNotes.value.trim();
+            if (!url) {
+                showMessage("Please enter a link.");
+                return;
+            }
+            try {
+                const linksRef = collection(db, `artifacts/${appId}/public/data/links`);
+                await addDoc(linksRef, {
+                    url: url,
+                    title: title,
+                    notes: notes,
+                    timestamp: new Date(),
+                });
+                linkUrl.value = '';
+                linkTitle.value = '';
+                linkNotes.value = '';
+            } catch (error) {
+                console.error("Error adding link:", error);
+                showMessage("Failed to add link. See console for details.");
+            }
+        });
+
+        addRouteButton.addEventListener('click', async () => {
+            const startPoint = routeStartPoint.value.trim();
+            const endPoint = routeEndPoint.value.trim();
+            const startDate = routeStartDate.value;
+            const endDate = routeEndDate.value;
+            const notes = routeNotes.value.trim();
+            if (!startPoint || !endPoint) {
+                showMessage("Please enter a start and end point for your route.");
+                return;
+            }
+            try {
+                const routesRef = collection(db, `artifacts/${appId}/public/data/routes`);
+                await addDoc(routesRef, {
+                    startPoint: startPoint,
+                    endPoint: endPoint,
+                    startDate: startDate,
+                    endDate: endDate,
+                    notes: notes,
+                    timestamp: new Date(),
+                });
+                routeStartPoint.value = '';
+                routeEndPoint.value = '';
+                routeStartDate.value = '';
+                routeEndDate.value = '';
+                routeNotes.value = '';
+            } catch (error) {
+                console.error("Error adding route:", error);
+                showMessage("Failed to add route. See console for details.");
+            }
+        });
+
+        addBookingButton.addEventListener('click', async () => {
+            const name = bookingName.value.trim();
+            const confirmation = bookingConfirmation.value.trim();
+            const startDate = bookingStartDate.value;
+            const endDate = bookingEndDate.value;
+            const time = bookingTime.value;
+            const notes = bookingNotes.value.trim();
+            if (!name) {
+                showMessage("Please enter a booking name.");
+                return;
+            }
+            try {
+                const bookingsRef = collection(db, `artifacts/${appId}/public/data/bookings`);
+                await addDoc(bookingsRef, {
+                    bookingName: name,
+                    confirmationNumber: confirmation,
+                    startDate: startDate,
+                    endDate: endDate,
+                    time: time,
+                    notes: notes,
+                    timestamp: new Date(),
+                });
+                bookingName.value = '';
+                bookingConfirmation.value = '';
+                bookingStartDate.value = '';
+                bookingEndDate.value = '';
+                bookingTime.value = '';
+                bookingNotes.value = '';
+            } catch (error) {
+                console.error("Error adding booking:", error);
+                showMessage("Failed to add booking. See console for details.");
+            }
+        });
+        
+        addEventButton.addEventListener('click', async () => {
+            const name = eventName.value.trim();
+            const location = eventLocation.value.trim();
+            const date = eventDate.value;
+            const time = eventTime.value;
+            const documentFile = eventDocument.files[0];
+            const notes = eventNotes.value.trim();
+            
+            if (!name || !date) {
+                showMessage("Event name and date are required.");
+                return;
+            }
+            
+            try {
+                const eventsRef = collection(db, `artifacts/${appId}/public/data/events`);
+                await addDoc(eventsRef, {
+                    eventName: name,
+                    eventLocation: location,
+                    eventDate: date,
+                    eventTime: time,
+                    documentName: documentFile ? documentFile.name : null,
+                    notes: notes,
+                    timestamp: new Date(),
+                });
+                eventName.value = '';
+                eventLocation.value = '';
+                eventDate.value = '';
+                eventTime.value = '';
+                eventDocument.value = '';
+                eventNotes.value = '';
+            } catch (error) {
+                console.error("Error adding event:", error);
+                showMessage("Failed to add event. See console for details.");
+            }
+        });
+
+        // --- Rendering Functions ---
+        function renderPhotos(photos) {
+            photosList.innerHTML = '';
+            photos.forEach(photo => {
+                const photoCard = document.createElement('div');
+                photoCard.className = 'bg-white border border-black p-4 text-center';
+                photoCard.innerHTML = `
+                    <div class="text-xs text-gray-500 text-center p-2 break-words max-w-full">
+                        <p class="font-semibold text-gray-800">${photo.filename}</p>
+                        ${photo.caption ? `<p class="mt-1">${photo.caption}</p>` : ''}
+                    </div>
+                    <button data-id="${photo.id}" class="delete-photo-btn absolute top-1 right-1 p-1 bg-white bg-opacity-70 rounded-full hover:bg-opacity-100 transition duration-300 ease-in-out hidden group-hover:block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                `;
+                photosList.appendChild(photoCard);
+            });
+            document.querySelectorAll('.delete-photo-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/photos`, docId));
+                });
+            });
+        }
+
+        function renderLinks(links) {
+            linksList.innerHTML = '';
+            links.forEach(link => {
+                const linkCard = document.createElement('div');
+                linkCard.className = 'bg-white p-4 border border-black';
+                linkCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <a href="${link.url}" target="_blank" class="text-black font-medium break-all truncate w-full pr-4">${link.title || 'Link'}</a>
+                        <button data-id="${link.id}" class="delete-link-btn flex-shrink-0 text-gray-500 hover:text-black transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.013 21H7.987a2 2 0 01-1.92-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    ${link.notes ? `<p class="text-sm text-gray-600">${link.notes}</p>` : ''}
+                `;
+                linksList.appendChild(linkCard);
+            });
+            document.querySelectorAll('.delete-link-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/links`, docId));
+                });
+            });
+        }
+
+        function renderRoutes(routes) {
+            routesList.innerHTML = '';
+            routes.forEach(route => {
+                const routeCard = document.createElement('div');
+                routeCard.className = 'bg-white p-4 border border-black';
+                
+                let dateDisplay = '';
+                if (route.startDate && route.endDate) {
+                    dateDisplay = `Start: ${route.startDate} | End: ${route.endDate}`;
+                } else if (route.startDate) {
+                    dateDisplay = `Date: ${route.startDate}`;
+                }
+
+                routeCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex flex-col">
+                            <span class="text-gray-800 font-medium">${route.startPoint} to ${route.endPoint}</span>
+                            ${dateDisplay ? `<span class="text-sm text-gray-500 mt-1">${dateDisplay}</span>` : ''}
+                        </div>
+                        <button data-id="${route.id}" class="delete-route-btn flex-shrink-0 text-gray-500 hover:text-black transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.013 21H7.987a2 2 0 01-1.92-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    ${route.notes ? `<p class="text-sm text-gray-600">${route.notes}</p>` : ''}
+                `;
+                routesList.appendChild(routeCard);
+            });
+            document.querySelectorAll('.delete-route-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/routes`, docId));
+                });
+            });
+        }
+
+        function renderBookings(bookings) {
+            bookingsList.innerHTML = '';
+            bookings.forEach(booking => {
+                const bookingCard = document.createElement('div');
+                bookingCard.className = 'bg-white p-4 border border-black';
+                
+                let dateDisplay = '';
+                if (booking.startDate && booking.endDate) {
+                    dateDisplay = `Start: ${booking.startDate} | End: ${booking.endDate}`;
+                } else if (booking.startDate) {
+                    dateDisplay = `Date: ${booking.startDate}`;
+                }
+
+                bookingCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex flex-col">
+                            <span class="text-lg font-semibold text-gray-900">${booking.bookingName}</span>
+                            ${dateDisplay ? `<span class="text-sm text-gray-500 mt-1">${dateDisplay}</span>` : ''}
+                            ${booking.time ? `<span class="text-sm text-gray-500">Time: ${booking.time}</span>` : ''}
+                        </div>
+                        <button data-id="${booking.id}" class="delete-booking-btn flex-shrink-0 text-gray-500 hover:text-black transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.013 21H7.987a2 2 0 01-1.92-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        ${booking.confirmationNumber ? `<li><span class="font-medium">Confirmation:</span> ${booking.confirmationNumber}</li>` : ''}
+                        ${booking.notes ? `<li><span class="font-medium">Notes:</span> ${booking.notes}</li>` : ''}
+                    </ul>
+                `;
+                bookingsList.appendChild(bookingCard);
+            });
+            document.querySelectorAll('.delete-booking-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/bookings`, docId));
+                });
+            });
+        }
+        
+        function renderEvents(events) {
+            eventsList.innerHTML = '';
+            events.forEach(event => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'bg-white p-4 border border-black';
+                eventCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex flex-col">
+                            <span class="text-lg font-semibold text-gray-900">${event.eventName}</span>
+                            ${event.eventDate ? `<span class="text-sm text-gray-500 mt-1">Date: ${event.eventDate}</span>` : ''}
+                            ${event.eventTime ? `<span class="text-sm text-gray-500">Time: ${event.eventTime}</span>` : ''}
+                        </div>
+                        <button data-id="${event.id}" class="delete-event-btn flex-shrink-0 text-gray-500 hover:text-black transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.013 21H7.987a2 2 0 01-1.92-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        ${event.eventLocation ? `<li><span class="font-medium">Location:</span> ${event.eventLocation}</li>` : ''}
+                        ${event.documentName ? `<li><span class="font-medium">Document:</span> ${event.documentName}</li>` : ''}
+                        ${event.notes ? `<li><span class="font-medium">Notes:</span> ${event.notes}</li>` : ''}
+                    </ul>
+                `;
+                eventsList.appendChild(eventCard);
+            });
+            document.querySelectorAll('.delete-event-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const docId = e.currentTarget.dataset.id;
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/events`, docId));
+                });
+            });
+        }
+
+        window.onload = initializeFirebase;
+    </script>
+</body>
+
+</html>
